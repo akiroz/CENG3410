@@ -1,0 +1,56 @@
+# Lab4: Weather Notifier
+
+In this lab, a MCU-based weather notifier is designed and implemented using an
+Arduino Uno and an ESP8266-based network shield.
+
+Weather data is fetched from OpenWeatherMap using a JSON-based HTTP API and
+displayed on an OLED screen.
+
+## Setup
+
+Due to the resource limitations of the Arduino, it was not possible to fetch
+data directly from OpenWeatherMap because their API uses TLS for security.
+Instead, the weather notifier accessed OpenWeatherMap via a simple TLS
+termination proxy serving data as plain HTTP.
+
+The ESP8266 is configured as a WiFi station which automatically connects to a
+pre-defined access point. The ESP8266 also acts as a TCP client which
+automatically connects to the proxy server.
+
+The Arduino Uno then communicates with the ESP8266 via UART.
+
+## Fetching Data
+
+The OpenWeatherMap API exposes a simple HTTP GET endpoint that provides the
+current weather in a specified location. A location ID is passed to
+OpenWeatherMap using a query parameter in the URL along with an access key
+for authentication and authorization. The access key is provided by
+OpenWeatherMap after signing up. For this lab, I have chosen to use the
+location ID for Hong Kong, a full list is available on their site.
+
+After sending the HTTP GET request, the server will respond with a bunch of
+headers followed by a JSON payload. There's a lot of information in the headers
+but we only care about the Content-Length for this project, we will use this
+header to know how many bytes to read after the headers and allocate memory
+to store the payload.
+
+When the entire payload is received, we can decode the information we need.
+This part is done using a 3rd party library so we don't need to dive into the
+details of JSON parsing. For this project, we will extract the time,
+temperature, humidity, pressure and weather code (defined by OpenWeatherMap,
+more on this later).
+
+## Displaying Data
+
+For displaying data, we will use an OLED display with a SSD1306 controller.
+The Arduino communicates with the SSD1306 via I2C, once again, this part is
+handled by a 3rd party library which exposes high-level drawing functions such
+that the low-level communication protocols are abstracted.
+
+With the help of our 3rd party library, we can simply print text onto the OLED
+display. The weather code mentioned before requires some special handling
+though, it is a code that represents the weather condition as a numerical
+value, there are about 60 of them grouped into 6 main categories. For the sake
+of simplicity we will only display a unique description for each main category.
+The first digit of the weather code is taken and mapped to a corresponding
+string value such as "Rainy" or "Clear Sky".
